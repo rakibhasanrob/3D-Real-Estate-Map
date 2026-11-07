@@ -1,0 +1,2131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Real Estate Riverside Masterplan | Interactive Plot Selector</title>
+
+    <!-- Google Fonts: Inter & Arvo (Matching Luxury Typography) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Arvo:wght@400;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- MapLibre GL JS (High-Performance 3D Vector Maps) -->
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+    <style>
+      :root {
+        --brand-red: #d50032;
+        --brand-red-hover: #b3002a;
+        --brand-teal: #1ea89c;
+        --brand-amber: #d97706;
+        --text-primary: #111111;
+        --text-secondary: #555555;
+        --text-muted: #777777;
+        --border-color: #e5e7eb;
+        --border-input: #cccccc;
+        --sidebar-width: 490px;
+        --bg-white: #ffffff;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f1f5f9;
+        color: var(--text-primary);
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+      }
+
+      /* ================= 1. 3D MAP CANVAS ================= */
+      #map3dContainer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        background: #cbd5e1;
+      }
+
+      /* ================= 2. LEFT SIDEBAR ================= */
+      .locator-sidebar {
+        position: absolute;
+        top: 24px;
+        left: 24px;
+        bottom: 24px;
+        width: var(--sidebar-width);
+        max-width: calc(100vw - 48px);
+        background: #ffffff;
+        z-index: 1200;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.06);
+        display: flex;
+        flex-direction: column;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid rgba(0, 0, 0, 0.07);
+      }
+
+      /* Sidebar Header */
+      .sidebar-header {
+        padding: 18px 20px 14px;
+        border-bottom: 1px solid var(--border-color);
+        background: #ffffff;
+        flex-shrink: 0;
+      }
+
+      /* Title Row with Single-Line Action Buttons */
+      .sidebar-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .sidebar-title {
+        font-family: 'Arvo', Georgia, serif;
+        font-size: 15.5px;
+        font-weight: 700;
+        color: #111111;
+        letter-spacing: 0.01em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .sidebar-top-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+
+      /* Saved Toggle Pill */
+      .saved-toggle-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: #f4f5f7;
+        border: 1px solid #dcdfe4;
+        border-radius: 20px;
+        padding: 4px 9px;
+        font-size: 10.5px;
+        font-weight: 700;
+        color: #333333;
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: all 0.15s ease;
+      }
+
+      .saved-toggle-pill:hover {
+        background: #e9ecef;
+      }
+
+      .saved-toggle-pill.active {
+        background: #fff0f3;
+        border-color: var(--brand-red);
+        color: var(--brand-red);
+      }
+
+      .saved-count-pill {
+        background: var(--brand-red);
+        color: #ffffff;
+        font-size: 10px;
+        font-weight: 800;
+        border-radius: 10px;
+        padding: 1px 6px;
+        line-height: 1.2;
+      }
+
+      /* Strictly Single-Line ALL PROPERTIES Button */
+      .all-locations-link {
+        font-size: 10.5px;
+        font-weight: 800;
+        color: #111111;
+        background: none;
+        border: none;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        padding: 4px 2px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        border-bottom: 2px solid transparent;
+        transition: border-color 0.15s ease, color 0.15s ease;
+      }
+
+      .all-locations-link:hover {
+        border-bottom-color: #111111;
+      }
+
+      /* Search Input Box */
+      .search-box-wrap {
+        display: flex;
+        align-items: center;
+        border: 1px solid var(--border-input);
+        height: 42px;
+        padding: 0 12px;
+        background: #ffffff;
+        border-radius: 4px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+
+      .search-box-wrap:focus-within {
+        border-color: #111111;
+        box-shadow: 0 0 0 1px #111111;
+      }
+
+      .locate-arrow-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px;
+        margin-right: 8px;
+        color: var(--brand-red);
+      }
+
+      .locate-arrow-btn svg {
+        width: 17px;
+        height: 17px;
+      }
+
+      .search-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-family: inherit;
+        font-size: 12.5px;
+        color: #111111;
+        background: transparent;
+      }
+
+      .search-input::placeholder {
+        color: #888888;
+      }
+
+      .clear-search-btn {
+        background: none;
+        border: none;
+        font-size: 18px;
+        line-height: 1;
+        color: #999999;
+        cursor: pointer;
+        padding: 0 6px;
+        display: none;
+      }
+
+      .clear-search-btn:hover {
+        color: #333333;
+      }
+
+      .search-lens-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px;
+        color: #444444;
+      }
+
+      .search-lens-btn svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      /* Category Filter Pills Row */
+      .filter-tabs-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 20px;
+        background: #ffffff;
+        border-bottom: 1px solid var(--border-color);
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+        flex-shrink: 0;
+      }
+
+      .filter-tabs-row::-webkit-scrollbar {
+        display: none;
+      }
+
+      .filter-tab {
+        background: #f3f4f6;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        padding: 6px 10px;
+        font-size: 10.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #4b5563;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .filter-tab:hover {
+        background: #e5e7eb;
+        color: #111111;
+      }
+
+      .filter-tab.active {
+        background: #0f172a;
+        color: #ffffff;
+        border-color: #0f172a;
+      }
+
+      /* Results Info & Count Bar */
+      .results-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 20px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-muted);
+        background: #fafafa;
+        border-bottom: 1px solid var(--border-color);
+        flex-shrink: 0;
+      }
+
+      .reset-filters-btn {
+        background: none;
+        border: none;
+        color: #1ea89c;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .reset-filters-btn:hover {
+        text-decoration: underline;
+      }
+
+      /* Scrollable Property Cards List */
+      .sidebar-scroll-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        background: #f8fafc;
+      }
+
+      /* Property Card Layout */
+      .plot-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 14px;
+        cursor: pointer;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .plot-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        border-color: #cbd5e1;
+      }
+
+      .plot-card.active-card {
+        border: 2px solid var(--brand-red);
+        box-shadow: 0 0 0 1px var(--brand-red), 0 8px 24px rgba(213, 0, 50, 0.14);
+      }
+
+      .card-top-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .card-plot-title {
+        font-family: 'Arvo', Georgia, serif;
+        font-size: 13.5px;
+        font-weight: 700;
+        color: #111111;
+        line-height: 1.3;
+      }
+
+      .card-address-sub {
+        font-size: 10.5px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        margin-top: 2px;
+      }
+
+      .card-header-right {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      .card-save-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 2px;
+        color: #cbd5e1;
+        transition: color 0.15s ease, transform 0.15s ease;
+      }
+
+      .card-save-btn:hover {
+        transform: scale(1.15);
+      }
+
+      .card-save-btn.saved {
+        color: var(--brand-red);
+      }
+
+      .card-distance-label {
+        font-size: 10.5px;
+        font-weight: 600;
+        color: #64748b;
+      }
+
+      /* Card Media & Price Row */
+      .card-media-row {
+        display: flex;
+        gap: 12px;
+        margin-top: 6px;
+        margin-bottom: 12px;
+      }
+
+      .card-thumb-wrap {
+        position: relative;
+        width: 108px;
+        height: 74px;
+        border-radius: 6px;
+        overflow: hidden;
+        flex-shrink: 0;
+        background: #e2e8f0;
+      }
+
+      .card-thumb-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        transition: transform 0.3s ease;
+      }
+
+      .plot-card:hover .card-thumb-img {
+        transform: scale(1.05);
+      }
+
+      .card-badge-status {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        font-size: 8px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        padding: 2px 5px;
+        border-radius: 3px;
+        color: #ffffff;
+      }
+
+      .status-rent-to-buy {
+        background: var(--brand-teal);
+      }
+
+      .status-for-sale {
+        background: var(--brand-red);
+      }
+
+      .status-coming-soon {
+        background: var(--brand-amber);
+      }
+
+      .card-info-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .card-price-val {
+        font-size: 15px;
+        font-weight: 800;
+        color: #111111;
+        letter-spacing: -0.01em;
+      }
+
+      .card-specs-line {
+        font-size: 11px;
+        color: var(--text-secondary);
+        font-weight: 500;
+        margin-top: 2px;
+      }
+
+      .card-type-desc {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 3px;
+      }
+
+      .card-openhouse-banner {
+        font-size: 9.5px;
+        font-weight: 700;
+        color: var(--brand-red);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-top: 4px;
+      }
+
+      /* Card Action Buttons Row: Strictly Single-Line & Safe Padding */
+      .card-actions-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        padding-top: 10px;
+        border-top: 1px solid #f1f5f9;
+        margin-top: auto;
+      }
+
+      .card-action-link {
+        font-size: 10px;
+        font-weight: 700;
+        color: #334155;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 5px 4px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: color 0.15s ease;
+      }
+
+      .card-action-link:hover {
+        color: #0f172a;
+      }
+
+      .card-action-link svg {
+        width: 12px;
+        height: 12px;
+        color: #64748b;
+      }
+
+      .card-btn-inquire {
+        background: var(--brand-red);
+        color: #ffffff;
+        border: 1px solid var(--brand-red);
+        border-radius: 4px;
+        padding: 5px 10px;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: background-color 0.15s ease;
+      }
+
+      .card-btn-inquire:hover {
+        background: var(--brand-red-hover);
+        border-color: var(--brand-red-hover);
+      }
+
+      .card-btn-book {
+        background: #ffffff;
+        color: var(--brand-red);
+        border: 1px solid var(--brand-red);
+        border-radius: 4px;
+        padding: 5px 9px;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: all 0.15s ease;
+      }
+
+      .card-btn-book:hover {
+        background: #fff0f3;
+      }
+
+      /* Empty / No Results State */
+      .empty-results-msg {
+        padding: 40px 20px;
+        text-align: center;
+        color: #64748b;
+        font-size: 13px;
+      }
+
+      /* ================= 3. MAP 3D FLOATING MARKER PINS ================= */
+      .custom-pin-3d {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 44px;
+        pointer-events: auto;
+        user-select: none;
+        transition: none !important;
+      }
+
+      /* Default Pin Dimensions */
+      .custom-pin-3d .pin-svg-wrap {
+        width: 34px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
+        transition: transform 0.2s ease, filter 0.2s ease;
+      }
+
+      .custom-pin-3d:hover .pin-svg-wrap {
+        transform: translateY(-4px) scale(1.12);
+        filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45));
+      }
+
+      /* Active Selected Pin */
+      .custom-pin-3d.active-pin .pin-svg-wrap {
+        width: 38px;
+        height: 50px;
+        transform: translateY(-6px) scale(1.22);
+        filter: drop-shadow(0 10px 16px rgba(213, 0, 50, 0.45));
+      }
+
+      /* ================= 4. MAP HOVER / ACTIVE POPUP CARD ================= */
+      .map-plot-popup {
+        position: absolute;
+        z-index: 1500;
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        width: 250px;
+        pointer-events: auto;
+        overflow: hidden;
+        display: none;
+        transform: translate(-50%, -100%);
+        margin-top: -16px;
+        transition: opacity 0.15s ease;
+      }
+
+      .map-plot-popup::after {
+        content: '';
+        position: absolute;
+        bottom: -6px;
+        left: 50%;
+        transform: translateX(-50%) rotate(45deg);
+        width: 12px;
+        height: 12px;
+        background: #ffffff;
+        border-right: 1px solid rgba(0, 0, 0, 0.08);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      }
+
+      .popup-thumb-img {
+        width: 100%;
+        height: 104px;
+        object-fit: cover;
+        display: block;
+      }
+
+      .popup-body {
+        padding: 10px 12px 12px;
+      }
+
+      .popup-tag-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 4px;
+      }
+
+      .popup-status-pill {
+        font-size: 8px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #ffffff;
+        padding: 2px 5px;
+        border-radius: 3px;
+      }
+
+      .popup-title {
+        font-family: 'Arvo', Georgia, serif;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: #111111;
+        line-height: 1.25;
+      }
+
+      .popup-price {
+        font-size: 13.5px;
+        font-weight: 800;
+        color: var(--brand-red);
+        margin-top: 3px;
+      }
+
+      .popup-specs {
+        font-size: 10px;
+        color: #64748b;
+        font-weight: 500;
+        margin-top: 2px;
+      }
+
+      .popup-click-hint {
+        font-size: 9px;
+        font-weight: 700;
+        color: #1ea89c;
+        text-transform: uppercase;
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        gap: 3px;
+      }
+
+      /* ================= 5. LUXURY FLOATING CONTROLS (BOTTOM RIGHT) ================= */
+      .floating-controls-stack {
+        position: absolute;
+        bottom: 24px;
+        right: 24px;
+        z-index: 1200;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .map-action-circle-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #334155;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+      }
+
+      .map-action-circle-btn:hover {
+        background: #ffffff;
+        color: #0f172a;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+      }
+
+      .map-action-circle-btn:active {
+        transform: translateY(0);
+      }
+
+      .map-action-circle-btn.active-mode {
+        background: #0f172a;
+        color: #ffffff;
+        border-color: #0f172a;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.35);
+      }
+
+      .compass-needle-wrap {
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.1s linear;
+      }
+
+      /* ================= 6. MODAL DIALOGS ================= */
+      .property-modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        z-index: 2000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .property-modal-box {
+        background: #ffffff;
+        border-radius: 12px;
+        width: 650px;
+        max-width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+        position: relative;
+        animation: modalFadeIn 0.2s ease-out;
+      }
+
+      @keyframes modalFadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(12px) scale(0.97);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .modal-gallery-wrap {
+        position: relative;
+        height: 280px;
+        background: #1e293b;
+      }
+
+      .modal-gallery-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .modal-close-btn {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.55);
+        color: #ffffff;
+        border: none;
+        cursor: pointer;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.15s ease;
+      }
+
+      .modal-close-btn:hover {
+        background: rgba(0, 0, 0, 0.85);
+      }
+
+      .modal-content-pad {
+        padding: 24px;
+      }
+
+      .modal-head-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .modal-title {
+        font-family: 'Arvo', Georgia, serif;
+        font-size: 20px;
+        font-weight: 700;
+        color: #111111;
+        line-height: 1.25;
+      }
+
+      .modal-address {
+        font-size: 12px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-top: 4px;
+      }
+
+      .modal-price-box {
+        text-align: right;
+        flex-shrink: 0;
+      }
+
+      .modal-price-num {
+        font-size: 22px;
+        font-weight: 800;
+        color: #111111;
+      }
+
+      .modal-specs-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        padding: 14px;
+        background: #f8fafc;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .spec-item-box {
+        text-align: center;
+      }
+
+      .spec-val-text {
+        font-size: 13.5px;
+        font-weight: 800;
+        color: #111111;
+      }
+
+      .spec-lbl-text {
+        font-size: 10px;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        margin-top: 2px;
+      }
+
+      .modal-desc-body {
+        font-size: 13px;
+        line-height: 1.6;
+        color: #334155;
+        margin-bottom: 20px;
+      }
+
+      .modal-actions-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        padding-top: 16px;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .btn-card-outline {
+        padding: 9px 16px;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #334155;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .btn-card-outline:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+      }
+
+      .btn-card-solid {
+        padding: 9px 20px;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        background: var(--brand-red);
+        color: #ffffff;
+        border: 1px solid var(--brand-red);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+      }
+
+      .btn-card-solid:hover {
+        background: var(--brand-red-hover);
+        border-color: var(--brand-red-hover);
+      }
+
+      /* Creator Info Modal */
+      .creator-modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        z-index: 2100;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .creator-modal-box {
+        background: #ffffff;
+        border-radius: 12px;
+        width: 500px;
+        max-width: 100%;
+        padding: 28px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+        position: relative;
+        text-align: center;
+      }
+
+      /* Toast Notifications */
+      .toast-notification {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: #0f172a;
+        color: #ffffff;
+        padding: 10px 20px;
+        border-radius: 30px;
+        font-size: 12px;
+        font-weight: 600;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+        z-index: 3000;
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        pointer-events: none;
+      }
+
+      .toast-notification.show {
+        transform: translateX(-50%) translateY(0);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 1. 3D Map Viewport -->
+    <div id="map3dContainer"></div>
+
+    <!-- 2. Left Sidebar (Waterfront Masterplan) -->
+    <aside class="locator-sidebar">
+      <!-- Header -->
+      <div class="sidebar-header">
+        <div class="sidebar-title-row">
+          <h1 class="sidebar-title">WATERFRONT MASTERPLAN</h1>
+          <div class="sidebar-top-actions">
+            <button class="saved-toggle-pill" id="savedToggleBtn" onclick="toggleSavedFilter()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+              <span>Saved</span>
+              <span class="saved-count-pill" id="savedCountNum">2</span>
+            </button>
+            <button class="all-locations-link" onclick="resetFilters()">All Properties</button>
+          </div>
+        </div>
+
+        <!-- Search Box -->
+        <div class="search-box-wrap">
+          <button class="locate-arrow-btn" title="Center On Overview" onclick="reset3DCameraOverview()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+            </svg>
+          </button>
+          <input
+            type="text"
+            id="searchInput"
+            class="search-input"
+            placeholder="Search by plot number, house name, style, or status..."
+            oninput="handleSearchInput(event)"
+          />
+          <button class="clear-search-btn" id="clearSearchBtn" onclick="clearSearch()" title="Clear search">&times;</button>
+          <button class="search-lens-btn" onclick="document.getElementById('searchInput').focus()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="filter-tabs-row" id="filterPillsRow">
+        <button class="filter-tab active" data-filter="ALL" onclick="setCategoryFilter('ALL')">All Properties (12)</button>
+        <button class="filter-tab" data-filter="RENT TO BUY" onclick="setCategoryFilter('RENT TO BUY')">Rent to Buy (7)</button>
+        <button class="filter-tab" data-filter="FOR SALE" onclick="setCategoryFilter('FOR SALE')">For Sale (3)</button>
+        <button class="filter-tab" data-filter="COMING SOON" onclick="setCategoryFilter('COMING SOON')">Coming Soon (2)</button>
+      </div>
+
+      <!-- Results Count Bar -->
+      <div class="results-bar">
+        <span id="resultsCountLabel">Showing 12 Available Plots</span>
+        <button class="reset-filters-btn" onclick="resetFilters()">Reset filters</button>
+      </div>
+
+      <!-- Scrollable Properties Cards List -->
+      <div class="sidebar-scroll-list" id="plotsCardsContainer">
+        <!-- Rendered via renderPlotList() -->
+      </div>
+    </aside>
+
+    <!-- 3. Dynamic Hover / Click Map Preview Card -->
+    <div class="map-plot-popup" id="mapHoverPopup">
+      <img src="" alt="" class="popup-thumb-img" id="popupThumbImg" />
+      <div class="popup-body">
+        <div class="popup-tag-row">
+          <span class="popup-status-pill" id="popupStatusBadge">RENT TO BUY</span>
+          <span style="font-size: 10px; font-weight: 700; color: #64748b;" id="popupPlotNum">PLOT 23</span>
+        </div>
+        <h4 class="popup-title" id="popupTitle">The Thames Reach Villa</h4>
+        <div class="popup-price" id="popupPrice">£525,000</div>
+        <div class="popup-specs" id="popupSpecs">3 Beds &bull; 2.5 Baths &bull; 94.80 sqm</div>
+        <div class="popup-click-hint">
+          <span>Click to view full details &rarr;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Luxury Floating Controls (Bottom Right) -->
+    <div class="floating-controls-stack">
+      <!-- Information / Creator Info -->
+      <button class="map-action-circle-btn" onclick="openCreatorModal()" title="Masterplan Information">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+      </button>
+
+      <!-- Nautical Compass Needle (Rotates with Bearing, Click Resets North) -->
+      <button class="map-action-circle-btn" id="compassBtn" onclick="resetNorth()" title="Reset North">
+        <div class="compass-needle-wrap" id="compassNeedle">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <polygon points="12,2 16,12 12,9" fill="#d50032"/>
+            <polygon points="12,2 8,12 12,9" fill="#e11d48"/>
+            <polygon points="12,22 16,12 12,15" fill="#94a3b8"/>
+            <polygon points="12,22 8,12 12,15" fill="#64748b"/>
+          </svg>
+        </div>
+      </button>
+
+      <!-- 3D Perspective Mode (Pitch 48) -->
+      <button class="map-action-circle-btn active-mode" id="pitch3DBtn" onclick="adjustPitch(48)" title="3D Isometric Perspective">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+          <line x1="12" y1="22.08" x2="12" y2="12"/>
+        </svg>
+      </button>
+
+      <!-- 2D Plan Mode (Pitch 0) -->
+      <button class="map-action-circle-btn" id="pitch2DBtn" onclick="adjustPitch(0)" title="2D Top-Down Masterplan">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <line x1="3" y1="9" x2="21" y2="9"/>
+          <line x1="9" y1="21" x2="9" y2="9"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- 5. Property Details Modal Dialog -->
+    <div class="property-modal-backdrop" id="propertyModalBackdrop" onclick="handleModalBackdropClick(event)">
+      <div class="property-modal-box" id="propertyModalContent">
+        <!-- Rendered dynamically via openDetailsModal() -->
+      </div>
+    </div>
+
+    <!-- 6. Project & Creator Info Modal -->
+    <div class="creator-modal-backdrop" id="creatorModalBackdrop" onclick="handleCreatorBackdropClick(event)">
+      <div class="creator-modal-box">
+        <button class="modal-close-btn" onclick="closeCreatorModal()">&times;</button>
+        <div style="width: 52px; height: 52px; border-radius: 50%; background: #fff0f3; color: var(--brand-red); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <h2 style="font-family: 'Arvo', Georgia, serif; font-size: 19px; color: #111111; margin-bottom: 6px;">
+          Cookham Moor &amp; Thames Enclave
+        </h2>
+        <div style="font-size: 12.5px; color: var(--brand-red); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 14px;">
+          3D Interactive Riverside Masterplan
+        </div>
+        <p style="font-size: 13px; line-height: 1.6; color: #475569; margin-bottom: 18px;">
+          An exclusive riverside collection of 12 distinct countryside residences nestled along the picturesque River Thames and expansive National Trust meadows of Cookham Moor, Berkshire.
+        </p>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; text-align: left; font-size: 12px; color: #334155; line-height: 1.6; margin-bottom: 20px;">
+          <strong>Demonstration Capabilities:</strong><br />
+          &bull; Crisp 3D Architectural Extrusions with Natural Silhouettes<br />
+          &bull; Sprawling River Thames Waterfront, Historic Bridge &amp; Nature Meadows<br />
+          &bull; Zero-Drift MapLibre Native Markers Permanently Centered on Building Centroids<br />
+          &bull; Single-Line Action Buttons with Generous Inner Card Padding
+        </div>
+        <button class="btn-card-solid" style="width: 100%; padding: 10px;" onclick="closeCreatorModal()">
+          Continue Exploring
+        </button>
+      </div>
+    </div>
+
+    <!-- Toast Notification Element -->
+    <div class="toast-notification" id="toastMsg">Notification message</div>
+
+    <script>
+      // ================= 12 PRESTIGIOUS RIVERSIDE PROPERTIES (COOKHAM MOOR & THAMES ENCLAVE) =================
+      const plotsData = [
+        {
+          id: "plot-23",
+          number: "23",
+          name: "The High Street Manor House",
+          plotTitle: "Plot 23 – The High Street Manor House",
+          type: "Heritage Village Manor",
+          address: "23 HIGH STREET, COOKHAM SL6",
+          city: "Cookham Village, Berkshire",
+          lng: -0.709595,
+          lat: 51.562420,
+          roofHeight: 13.5,
+          price: "£525,000",
+          shortPrice: "£525k",
+          status: "RENT TO BUY",
+          beds: 3,
+          baths: 2.5,
+          sqm: "94.80 sqm",
+          sqft: "1,020",
+          yearBuilt: 2026,
+          distance: "0.1 mi",
+          openHouse: "Open House Sat 11:00 - 15:00",
+          rentGuide: "£1,650 / mo",
+          tenure: "999-Year Leasehold",
+          epc: "EPC Rating: A (High Efficiency)",
+          parking: "Allocated EV Parking Bay",
+          garden: "Private Landscaped Walled Garden",
+          image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80",
+          description: "Signature 3-bedroom village manor commanding leafy vistas across historic High Street. Features bespoke quartz kitchen, underfloor heating, and secluded private garden."
+        },
+        {
+          id: "plot-10",
+          number: "10",
+          name: "The Moorland Manor House",
+          plotTitle: "Plot 10 – The Moorland Manor House",
+          type: "Moorland Manor House",
+          address: "10 COOKHAM MOOR, COOKHAM SL6",
+          city: "Cookham Moor, Berkshire",
+          lng: -0.707370,
+          lat: 51.561384,
+          roofHeight: 14.5,
+          price: "£680,000",
+          shortPrice: "£680k",
+          status: "RENT TO BUY",
+          beds: 4,
+          baths: 3,
+          sqm: "138.50 sqm",
+          sqft: "1,490",
+          yearBuilt: 2026,
+          distance: "0.2 mi",
+          openHouse: "Daily By Appointment",
+          rentGuide: "£2,100 / mo",
+          tenure: "Freehold",
+          epc: "EPC Rating: A",
+          parking: "Secure Gated Underground Garage",
+          garden: "Landscaped Courtyard Garden",
+          image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=900&q=80",
+          description: "Prestigious 4-bedroom manor home situated along scenic Cookham Moor. Boasts open-plan reception room, floor-to-ceiling glass doors, and master suite with freestanding soaking tub."
+        },
+        {
+          id: "plot-11",
+          number: "11",
+          name: "The High Street West End House",
+          plotTitle: "Plot 11 – The High Street West End House",
+          type: "Detached Village Villa",
+          address: "11 HIGH STREET WEST, COOKHAM SL6",
+          city: "Cookham Village, Berkshire",
+          lng: -0.710038,
+          lat: 51.561326,
+          roofHeight: 12.0,
+          price: "£825,000",
+          shortPrice: "£825k",
+          status: "RENT TO BUY",
+          beds: 4,
+          baths: 3.5,
+          sqm: "162.20 sqm",
+          sqft: "1,745",
+          yearBuilt: 2026,
+          distance: "0.2 mi",
+          openHouse: "Viewing Suite Open This Weekend",
+          rentGuide: "£2,650 / mo",
+          tenure: "999-Year Leasehold",
+          epc: "EPC Rating: A+",
+          parking: "Double Allocated EV Bay",
+          garden: "Private Rooftop Solarium & Lawn",
+          image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=80",
+          description: "Exceptional executive residence situated along the west end of Cookham High Street. Features Italian porcelain tiling, solar panels, and dual-aspect entertaining salon."
+        },
+        {
+          id: "plot-12",
+          number: "12",
+          name: "The Mill Lane Villa",
+          plotTitle: "Plot 12 – The Mill Lane Villa",
+          type: "Riverside Garden Villa",
+          address: "12 MILL LANE, COOKHAM SL6",
+          city: "Cookham Village, Berkshire",
+          lng: -0.706019,
+          lat: 51.561722,
+          roofHeight: 11.5,
+          price: "£685,000",
+          shortPrice: "£685k",
+          status: "RENT TO BUY",
+          beds: 3,
+          baths: 2,
+          sqm: "112.40 sqm",
+          sqft: "1,210",
+          yearBuilt: 2026,
+          distance: "0.3 mi",
+          openHouse: "Private Viewings Available",
+          rentGuide: "£2,150 / mo",
+          tenure: "Freehold",
+          epc: "EPC Rating: A",
+          parking: "Private Gated Driveway",
+          garden: "Wrap-Around Walled Garden",
+          image: "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=900&q=80",
+          description: "Elegant detached villa offering heritage architectural proportions with ultra-modern smart home automation, herringbone oak flooring, and hand-crafted shaker kitchen."
+        },
+        {
+          id: "plot-13",
+          number: "13",
+          name: "The Sutton Court Residence",
+          plotTitle: "Plot 13 – The Sutton Court Residence",
+          type: "Executive Garden Residence",
+          address: "13 SUTTON CLOSE, COOKHAM SL6",
+          city: "Cookham Village, Berkshire",
+          lng: -0.705435,
+          lat: 51.561392,
+          roofHeight: 10.5,
+          price: "£385,000",
+          shortPrice: "£385k",
+          status: "COMING SOON",
+          beds: 2,
+          baths: 2,
+          sqm: "74.50 sqm",
+          sqft: "800",
+          yearBuilt: 2027,
+          distance: "0.2 mi",
+          openHouse: "VIP Launch Autumn 2026",
+          rentGuide: "£1,450 / mo",
+          tenure: "999-Year Leasehold",
+          epc: "EPC Projected: A",
+          parking: "Dedicated Undercover Carport",
+          garden: "Private Patio & Herb Garden",
+          image: "https://images.unsplash.com/photo-1600573472550-8090b5e0745e?auto=format&fit=crop&w=900&q=80",
+          description: "Boutique village residence overlooking quiet garden greens. Designed for effortless modern living with private courtyard, ambient recessed lighting, and designer fixtures."
+        },
+        {
+          id: "plot-16",
+          number: "16",
+          name: "The School Lane House",
+          plotTitle: "Plot 16 – The School Lane House",
+          type: "Substantial Village Residence",
+          address: "16 SCHOOL LANE, COOKHAM SL6",
+          city: "Cookham Village, Berkshire",
+          lng: -0.706361,
+          lat: 51.560825,
+          roofHeight: 16.0,
+          price: "£1,150,000",
+          shortPrice: "£1.15M",
+          status: "FOR SALE",
+          beds: 5,
+          baths: 4.5,
+          sqm: "235.00 sqm",
+          sqft: "2,530",
+          yearBuilt: 2026,
+          distance: "0.2 mi",
+          openHouse: "Private Viewings Scheduled",
+          rentGuide: "£3,800 / mo",
+          tenure: "Freehold",
+          epc: "EPC Rating: A",
+          parking: "Triple Detached Heated Garage",
+          garden: "Half-Acre Landscaped Grounds",
+          image: "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=900&q=80",
+          description: "Spectacular flagship country estate set across expansive landscaped private grounds. Features double-height vaulted entrance gallery, wine cellar, and triple-aspect garden pavilion."
+        },
+        {
+          id: "plot-17",
+          number: "17",
+          name: "The Moor Cottage",
+          plotTitle: "Plot 17 – The Moor Cottage",
+          type: "Picturesque Period Cottage",
+          address: "17 THE MOOR, COOKHAM SL6",
+          city: "Cookham Moor, Berkshire",
+          lng: -0.707159,
+          lat: 51.560771,
+          roofHeight: 9.5,
+          price: "£440,000",
+          shortPrice: "£440k",
+          status: "RENT TO BUY",
+          beds: 2,
+          baths: 2,
+          sqm: "78.20 sqm",
+          sqft: "840",
+          yearBuilt: 2026,
+          distance: "0.2 mi",
+          openHouse: "Midweek Evening Viewings",
+          rentGuide: "£1,550 / mo",
+          tenure: "Freehold",
+          epc: "EPC Rating: B+",
+          parking: "Single Allocated Bay + Visitor",
+          garden: "Private South-Facing Sun Terrace",
+          image: "https://images.unsplash.com/photo-1600585152220-90363fe7e115?auto=format&fit=crop&w=900&q=80",
+          description: "Charming semi-detached cottage steps from the open meadows of Cookham Moor. Boasts exposed oak beams, modern open-concept kitchen, and sunny south-facing stone terrace."
+        },
+        {
+          id: "plot-20",
+          number: "20",
+          name: "The High Street South Villa",
+          plotTitle: "Plot 20 – The High Street South Villa",
+          type: "Substantial 4-Bed Family Villa",
+          address: "20 HIGH STREET SOUTH, COOKHAM SL6",
+          city: "Cookham Village, Berkshire",
+          lng: -0.708372,
+          lat: 51.560835,
+          roofHeight: 15.0,
+          price: "£875,000",
+          shortPrice: "£875k",
+          status: "FOR SALE",
+          beds: 4,
+          baths: 3,
+          sqm: "168.10 sqm",
+          sqft: "1,810",
+          yearBuilt: 2026,
+          distance: "0.2 mi",
+          openHouse: "Open House Sat 12:00 - 15:00",
+          rentGuide: "£2,800 / mo",
+          tenure: "Freehold",
+          epc: "EPC Rating: A",
+          parking: "Integrated Double Garage",
+          garden: "Private Lawn & Outdoor Kitchen",
+          image: "https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=900&q=80",
+          description: "Substantial 4-bedroom executive family villa overlooking lush greenery. Highlights include master bedroom sanctuary with walk-in dressing room and private enclosed lawn."
+        },
+        {
+          id: "plot-24",
+          number: "24",
+          name: "The Moor View Lodge",
+          plotTitle: "Plot 24 – The Moor View Lodge",
+          type: "Spacious Moorland Residence",
+          address: "24 MOOR VIEW, COOKHAM SL6",
+          city: "Cookham Moor, Berkshire",
+          lng: -0.708802,
+          lat: 51.560211,
+          roofHeight: 11.0,
+          price: "£495,000",
+          shortPrice: "£495k",
+          status: "RENT TO BUY",
+          beds: 3,
+          baths: 2,
+          sqm: "88.60 sqm",
+          sqft: "955",
+          yearBuilt: 2026,
+          distance: "0.3 mi",
+          openHouse: "By Appointment Only",
+          rentGuide: "£1,700 / mo",
+          tenure: "999-Year Leasehold",
+          epc: "EPC Rating: A",
+          parking: "Allocated Bay with Hypervolt EV",
+          garden: "Private Lawned Garden",
+          image: "https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=900&q=80",
+          description: "Modern countryside family home boasting light-filled interior layouts, floor-to-ceiling double glazing, and uninterrupted outlooks towards scenic protected common land."
+        },
+        {
+          id: "plot-25",
+          number: "25",
+          name: "The Poundfield Manor",
+          plotTitle: "Plot 25 – The Poundfield Manor",
+          type: "Contemporary Village Home",
+          address: "25 POUNDFIELD LANE, COOKHAM SL6",
+          city: "Cookham Moor, Berkshire",
+          lng: -0.707570,
+          lat: 51.560103,
+          roofHeight: 10.0,
+          price: "£410,000",
+          shortPrice: "£410k",
+          status: "RENT TO BUY",
+          beds: 3,
+          baths: 2,
+          sqm: "85.40 sqm",
+          sqft: "920",
+          yearBuilt: 2026,
+          distance: "0.3 mi",
+          openHouse: "Open Weekend Sat & Sun",
+          rentGuide: "£1,500 / mo",
+          tenure: "999-Year Leasehold",
+          epc: "EPC Rating: A+",
+          parking: "Secure Gated Parking Bay",
+          garden: "Private Timber Deck & Patio",
+          image: "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=900&q=80",
+          description: "Contemporary 3-bedroom village residence combining sustainable air-source heat pump technology with an elegant open-plan living, dining, and entertaining footprint."
+        },
+        {
+          id: "plot-26",
+          number: "26",
+          name: "The Marsh Meadow Home",
+          plotTitle: "Plot 26 – The Marsh Meadow Home",
+          type: "Country Meadow Villa",
+          address: "26 MARSH MEADOW, COOKHAM SL6",
+          city: "Cookham Moor, Berkshire",
+          lng: -0.706116,
+          lat: 51.560114,
+          roofHeight: 12.5,
+          price: "£530,000",
+          shortPrice: "£530k",
+          status: "COMING SOON",
+          beds: 3,
+          baths: 2.5,
+          sqm: "105.00 sqm",
+          sqft: "1,130",
+          yearBuilt: 2027,
+          distance: "0.3 mi",
+          openHouse: "Register Early Interest",
+          rentGuide: "£1,850 / mo",
+          tenure: "Freehold",
+          epc: "EPC Projected: A",
+          parking: "Private Double Driveway",
+          garden: "Private Lawn Backing onto Green",
+          image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=80",
+          description: "Sophisticated newly commissioned residence overlooking southern marsh meadows. Offers private gated entrance, EV fast charging, and bespoke German kitchen."
+        },
+        {
+          id: "plot-27",
+          number: "27",
+          name: "The East Moor Country House",
+          plotTitle: "Plot 27 – The East Moor Country House",
+          type: "Signature Riverside Estate",
+          address: "27 EAST MOOR, COOKHAM SL6",
+          city: "Cookham Moor, Berkshire",
+          lng: -0.705054,
+          lat: 51.560531,
+          roofHeight: 14.0,
+          price: "£720,000",
+          shortPrice: "£720k",
+          status: "FOR SALE",
+          beds: 4,
+          baths: 3.5,
+          sqm: "178.40 sqm",
+          sqft: "1,920",
+          yearBuilt: 2026,
+          distance: "0.3 mi",
+          openHouse: "Sunday Afternoon Viewings",
+          rentGuide: "£2,450 / mo",
+          tenure: "Freehold",
+          epc: "EPC Rating: A",
+          parking: "Double Detached Garage",
+          garden: "Extensive Walled Perimeter Grounds",
+          image: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=900&q=80",
+          description: "Superb 4-bedroom detached countryside residence situated along eastern edge of Cookham Moor. Boasts direct views towards the Thames water basin, spacious private lawn, and double garage."
+        }
+      ];
+
+      // ================= STATE MANAGEMENT =================
+      let activePlotId = null;
+      let hoveredPlotId = null;
+      let selectedCategory = "ALL";
+      let searchQuery = "";
+      let isShowingSavedOnly = false;
+      let savedPlotIds = new Set(["plot-23", "plot-10"]);
+      let markerInstances = [];
+
+      // Initial Camera Settings: Cookham Moor & River Thames Enclave
+      const INITIAL_CENTER = [-0.7068, 51.5608];
+      const INITIAL_ZOOM = 15.6;
+      const INITIAL_PITCH = 60; // Fully tilted 3D perspective
+      const INITIAL_BEARING = -25;
+
+      // ================= MAPLIBRE GL JS INITIALIZATION =================
+      const map = new maplibregl.Map({
+        container: "map3dContainer",
+        style: "https://tiles.openfreemap.org/styles/liberty",
+        center: INITIAL_CENTER,
+        zoom: INITIAL_ZOOM,
+        pitch: INITIAL_PITCH,
+        bearing: INITIAL_BEARING,
+        attributionControl: false,
+        maxPitch: 70
+      });
+
+      map.on("load", () => {
+        // 1. Suppress symbol/label layers to maintain a clean masterplan look
+        const style = map.getStyle();
+        if (style && style.layers) {
+          style.layers.forEach((layer) => {
+            if (layer.type === "symbol") {
+              map.setLayoutProperty(layer.id, "visibility", "none");
+            }
+          });
+        }
+
+        // 2. Natural architectural 3D building height extrusion with clean modern finish
+        if (map.getLayer("building-3d")) {
+          map.setPaintProperty("building-3d", "fill-extrusion-height", [
+            "*",
+            ["coalesce", ["get", "render_height"], ["get", "height"], 8],
+            1.35
+          ]);
+          map.setPaintProperty("building-3d", "fill-extrusion-base", 0);
+          map.setPaintProperty("building-3d", "fill-extrusion-color", "#f8fafc");
+          map.setPaintProperty("building-3d", "fill-extrusion-opacity", 0.96);
+        }
+
+        map.setLight({
+          anchor: "viewport",
+          color: "#ffffff",
+          intensity: 0.55
+        });
+
+        // Initialize 3D Markers & Sidebar
+        init3DMarkersOverlay();
+        renderPlotList();
+        updateFilterCounts();
+
+        // Start with clean state: no marker pre-selected
+        activePlotId = null;
+        hideHoverCard();
+      });
+
+      // Map Click: Deselect when clicking outside markers
+      map.on("click", () => {
+        activePlotId = null;
+        hoveredPlotId = null;
+        hideHoverCard();
+        init3DMarkersOverlay();
+        renderPlotList();
+      });
+
+      // Update positions and control active states on every render frame
+      map.on("render", () => {
+        updateHoverCardPosition();
+        updateCompassHeading();
+        updatePitchButtonsState();
+      });
+
+      // ================= ZERO-DRIFT NATIVE MAPLIBRE MARKERS =================
+      function getStatusColor(status) {
+        if (status === "FOR SALE") return "#d50032";
+        if (status === "RENT TO BUY") return "#1ea89c";
+        return "#d97706";
+      }
+
+      function getStatusBadgeClass(status) {
+        if (status === "FOR SALE") return "status-for-sale";
+        if (status === "RENT TO BUY") return "status-rent-to-buy";
+        return "status-coming-soon";
+      }
+
+      // Initialize native MapLibre markers permanently anchored to building coordinates
+      function init3DMarkersOverlay() {
+        markerInstances.forEach((m) => m.remove());
+        markerInstances = [];
+
+        const filtered = getFilteredPlots();
+
+        filtered.forEach((plot) => {
+          const isSelected = plot.id === activePlotId;
+          const fillColor = getStatusColor(plot.status);
+
+          const el = document.createElement("div");
+          el.className = "custom-pin-3d" + (isSelected ? " active-pin" : "");
+          el.id = "pin-" + plot.id;
+          el.style.position = "absolute";
+          el.style.top = "0";
+          el.style.left = "0";
+          el.style.width = "34px";
+          el.style.height = "44px";
+          el.style.transition = "none";
+
+          // Inner pin icon:
+          // Default: clean white center dot (no confusing numbers)
+          // Selected: luxury house silhouette
+          let innerGraphic = '';
+          if (isSelected) {
+            innerGraphic = `
+              <circle cx="16" cy="15" r="7.5" fill="#ffffff" />
+              <path d="M12.5 16.5V14.5L16 11.5L19.5 14.5V16.5C19.5 16.8 19.3 17 19 17H13C12.7 17 12.5 16.8 12.5 16.5Z" fill="${fillColor}" />
+            `;
+          } else {
+            innerGraphic = `
+              <circle cx="16" cy="15" r="5.5" fill="#ffffff" />
+            `;
+          }
+
+          el.innerHTML = `
+            <div class="pin-svg-wrap">
+              <svg width="100%" height="100%" viewBox="0 0 32 42" fill="none">
+                <path d="M16 42C16 42 32 26 32 16C32 7.16344 24.8366 0 16 0C7.16344 0 0 7.16344 0 16C0 26 16 42 16 42Z" fill="${fillColor}"/>
+                ${innerGraphic}
+              </svg>
+            </div>
+          `;
+
+          // Hover events on marker
+          el.addEventListener("mouseenter", (e) => {
+            e.stopPropagation();
+            hoveredPlotId = plot.id;
+            showHoverCard(plot);
+          });
+
+          el.addEventListener("mouseleave", (e) => {
+            e.stopPropagation();
+            if (activePlotId !== plot.id) {
+              hoveredPlotId = null;
+              hideHoverCard();
+            }
+          });
+
+          // Click on marker
+          el.addEventListener("click", (e) => {
+            e.stopPropagation();
+            selectPlot(plot.id, true, true);
+          });
+
+          // Permanently anchor to ground centroid using native MapLibre Marker
+          const marker = new maplibregl.Marker({
+            element: el,
+            anchor: "bottom"
+          })
+            .setLngLat([plot.lng, plot.lat])
+            .addTo(map);
+
+          markerInstances.push(marker);
+        });
+      }
+
+      // ================= HOVER POPUP CARD POSITIONING =================
+      function showHoverCard(plot) {
+        const popup = document.getElementById("mapHoverPopup");
+        document.getElementById("popupThumbImg").src = plot.image;
+        document.getElementById("popupTitle").textContent = plot.name;
+        document.getElementById("popupPrice").textContent = plot.price;
+        document.getElementById("popupSpecs").innerHTML =
+          plot.beds + " Beds &bull; " + plot.baths + " Baths &bull; " + plot.sqm;
+
+        const badge = document.getElementById("popupStatusBadge");
+        badge.textContent = plot.status;
+        badge.className = "popup-status-pill " + getStatusBadgeClass(plot.status);
+
+        document.getElementById("popupPlotNum").textContent = "PLOT " + plot.number;
+
+        popup.style.display = "block";
+        popup.onclick = () => openDetailsModal(plot.id);
+
+        updateHoverCardPosition();
+      }
+
+      function hideHoverCard() {
+        const popup = document.getElementById("mapHoverPopup");
+        if (popup) popup.style.display = "none";
+      }
+
+      function updateHoverCardPosition() {
+        const popup = document.getElementById("mapHoverPopup");
+        if (!popup || popup.style.display === "none") return;
+
+        const targetId = activePlotId || hoveredPlotId;
+        if (!targetId) {
+          hideHoverCard();
+          return;
+        }
+
+        const plot = plotsData.find((p) => p.id === targetId);
+        if (!plot) return;
+
+        // Position popup right above the pin top
+        const screenPos = map.project([plot.lng, plot.lat]);
+        popup.style.left = Math.round(screenPos.x) + "px";
+        popup.style.top = Math.round(screenPos.y - 48) + "px";
+      }
+
+      // ================= FILTERING & SEARCH =================
+      function getFilteredPlots() {
+        return plotsData.filter((plot) => {
+          if (isShowingSavedOnly && !savedPlotIds.has(plot.id)) return false;
+          if (selectedCategory !== "ALL" && plot.status !== selectedCategory) return false;
+          if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            const matchNum = plot.number.toLowerCase().includes(q);
+            const matchName = plot.name.toLowerCase().includes(q);
+            const matchAddr = plot.address.toLowerCase().includes(q);
+            const matchType = plot.type.toLowerCase().includes(q);
+            const matchStatus = plot.status.toLowerCase().includes(q);
+            if (!matchNum && !matchName && !matchAddr && !matchType && !matchStatus) return false;
+          }
+          return true;
+        });
+      }
+
+      function setCategoryFilter(category) {
+        selectedCategory = category;
+        document.querySelectorAll("#filterPillsRow .filter-tab").forEach((tab) => {
+          tab.classList.toggle("active", tab.getAttribute("data-filter") === category);
+        });
+        init3DMarkersOverlay();
+        renderPlotList();
+      }
+
+      function toggleSavedFilter() {
+        isShowingSavedOnly = !isShowingSavedOnly;
+        document.getElementById("savedToggleBtn").classList.toggle("active", isShowingSavedOnly);
+        init3DMarkersOverlay();
+        renderPlotList();
+      }
+
+      function handleSearchInput(e) {
+        searchQuery = e.target.value.trim();
+        document.getElementById("clearSearchBtn").style.display = searchQuery ? "block" : "none";
+        init3DMarkersOverlay();
+        renderPlotList();
+      }
+
+      function clearSearch() {
+        const inp = document.getElementById("searchInput");
+        inp.value = "";
+        searchQuery = "";
+        document.getElementById("clearSearchBtn").style.display = "none";
+        init3DMarkersOverlay();
+        renderPlotList();
+      }
+
+      function resetFilters() {
+        selectedCategory = "ALL";
+        searchQuery = "";
+        isShowingSavedOnly = false;
+        document.getElementById("searchInput").value = "";
+        document.getElementById("clearSearchBtn").style.display = "none";
+        document.getElementById("savedToggleBtn").classList.remove("active");
+        document.querySelectorAll("#filterPillsRow .filter-tab").forEach((tab) => {
+          tab.classList.toggle("active", tab.getAttribute("data-filter") === "ALL");
+        });
+        init3DMarkersOverlay();
+        renderPlotList();
+      }
+
+      function updateFilterCounts() {
+        const total = plotsData.length;
+        const rentToBuy = plotsData.filter((p) => p.status === "RENT TO BUY").length;
+        const forSale = plotsData.filter((p) => p.status === "FOR SALE").length;
+        const comingSoon = plotsData.filter((p) => p.status === "COMING SOON").length;
+
+        const pills = document.querySelectorAll("#filterPillsRow .filter-tab");
+        if (pills[0]) pills[0].textContent = "All Properties (" + total + ")";
+        if (pills[1]) pills[1].textContent = "Rent to Buy (" + rentToBuy + ")";
+        if (pills[2]) pills[2].textContent = "For Sale (" + forSale + ")";
+        if (pills[3]) pills[3].textContent = "Coming Soon (" + comingSoon + ")";
+
+        document.getElementById("savedCountNum").textContent = savedPlotIds.size;
+      }
+
+      // ================= RENDER SIDEBAR LIST =================
+      function renderPlotList() {
+        const container = document.getElementById("plotsCardsContainer");
+        const filtered = getFilteredPlots();
+
+        document.getElementById("resultsCountLabel").textContent =
+          "Showing " + filtered.length + " Available Plots";
+
+        if (filtered.length === 0) {
+          container.innerHTML =
+            '<div class="empty-results-msg">' +
+              '<strong>No properties match your current filters.</strong><br>' +
+              '<button class="reset-filters-btn" style="margin-top:8px;" onclick="resetFilters()">Reset all filters</button>' +
+            '</div>';
+          return;
+        }
+
+        container.innerHTML = filtered
+          .map((plot) => {
+            const isSelected = plot.id === activePlotId;
+            const isSaved = savedPlotIds.has(plot.id);
+            const statusClass = getStatusBadgeClass(plot.status);
+
+            return (
+              '<div class="plot-card' + (isSelected ? ' active-card' : '') + '" id="card-' + plot.id + '" onclick="selectPlot(\'' + plot.id + '\', true, true)">' +
+                '<div class="card-top-header">' +
+                  '<div>' +
+                    '<h3 class="card-plot-title">' + plot.plotTitle + '</h3>' +
+                    '<div class="card-address-sub">' + plot.address + '</div>' +
+                  '</div>' +
+                  '<div class="card-header-right">' +
+                    '<button class="card-save-btn' + (isSaved ? ' saved' : '') + '" onclick="toggleSavePlot(event, \'' + plot.id + '\')" title="Save plot">' +
+                      '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">' +
+                        '<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>' +
+                      '</svg>' +
+                    '</button>' +
+                    '<span class="card-distance-label">' + plot.distance + '</span>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="card-media-row">' +
+                  '<div class="card-thumb-wrap">' +
+                    '<img src="' + plot.image + '" alt="' + plot.name + '" class="card-thumb-img" />' +
+                    '<span class="card-badge-status ' + statusClass + '">' + plot.status + '</span>' +
+                  '</div>' +
+                  '<div class="card-info-col">' +
+                    '<div class="card-price-val">' + plot.price + '</div>' +
+                    '<div class="card-specs-line">' + plot.beds + ' Beds &bull; ' + plot.baths + ' Baths &bull; ' + plot.sqm + '</div>' +
+                    '<div class="card-type-desc">' + plot.type + '</div>' +
+                    '<div class="card-openhouse-banner">' + plot.openHouse + '</div>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="card-actions-bar">' +
+                  '<button class="card-action-link" onclick="event.stopPropagation(); openDetailsModal(\'' + plot.id + '\')">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                      '<circle cx="12" cy="12" r="10"/>' +
+                      '<line x1="12" y1="16" x2="12" y2="12"/>' +
+                      '<line x1="12" y1="8" x2="12.01" y2="8"/>' +
+                    '</svg>' +
+                    '<span>Property Info</span>' +
+                  '</button>' +
+                  '<button class="card-action-link" onclick="event.stopPropagation(); previewPlotLocation(\'' + plot.id + '\')">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                      '<polygon points="3 11 22 2 13 21 11 13 3 11"/>' +
+                    '</svg>' +
+                    '<span>Get Directions</span>' +
+                  '</button>' +
+                  '<button class="card-btn-inquire" onclick="event.stopPropagation(); openDetailsModal(\'' + plot.id + '\')">Inquire</button>' +
+                  '<button class="card-btn-book" onclick="event.stopPropagation(); scheduleTour(\'' + plot.id + '\')">Book Tour</button>' +
+                '</div>' +
+              '</div>'
+            );
+          })
+          .join("");
+      }
+
+      // ================= SELECT PLOT (CARD CLICK OR MARKER CLICK) =================
+      function selectPlot(plotId, gentleZoom = true, scrollList = true) {
+        activePlotId = plotId;
+        const plot = plotsData.find((p) => p.id === plotId);
+        if (!plot) return;
+
+        // Gentle zoom: zoom just a little bit (from 16.3 to 16.8), keeping surrounding countryside visible
+        if (gentleZoom) {
+          map.easeTo({
+            center: [plot.lng, plot.lat],
+            zoom: 16.6,
+            duration: 650
+          });
+        }
+
+        // Show popup card above the marker
+        showHoverCard(plot);
+
+        // Highlight marker
+        init3DMarkersOverlay();
+
+        // Highlight card in sidebar
+        document.querySelectorAll(".plot-card").forEach((card) => {
+          card.classList.toggle("active-card", card.id === "card-" + plotId);
+        });
+
+        // Smooth scroll sidebar to active card
+        if (scrollList) {
+          const cardEl = document.getElementById("card-" + plotId);
+          if (cardEl) {
+            cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }
+        }
+      }
+
+      function toggleSavePlot(e, plotId) {
+        e.stopPropagation();
+        if (savedPlotIds.has(plotId)) {
+          savedPlotIds.delete(plotId);
+          showToast("Property removed from Saved");
+        } else {
+          savedPlotIds.add(plotId);
+          showToast("Property added to Saved");
+        }
+        updateFilterCounts();
+        renderPlotList();
+      }
+
+      function previewPlotLocation(plotId) {
+        const plot = plotsData.find((p) => p.id === plotId);
+        if (!plot) return;
+        selectPlot(plotId, false, true);
+        showToast('Demo Preview: In a live build, "Get Directions" links to Google/Apple Maps for ' + plot.address);
+      }
+
+      function scheduleTour(plotId) {
+        const plot = plotsData.find((p) => p.id === plotId);
+        const name = plot ? plot.name : "this property";
+        showToast('Demo Preview: Tour booking can connect to Calendly or Matterport 3D Tour for ' + name);
+      }
+
+      // ================= CAMERA CONTROLS =================
+      function adjustPitch(targetPitch) {
+        map.easeTo({
+          pitch: targetPitch,
+          duration: 700
+        });
+      }
+
+      function resetNorth() {
+        map.easeTo({
+          bearing: 0,
+          duration: 600
+        });
+      }
+
+      function reset3DCameraOverview() {
+        map.flyTo({
+          center: INITIAL_CENTER,
+          zoom: INITIAL_ZOOM,
+          pitch: INITIAL_PITCH,
+          bearing: INITIAL_BEARING,
+          duration: 700
+        });
+        hideHoverCard();
+        showToast("Reset to Cookham Moor Riverside Masterplan Overview");
+      }
+
+      // ================= PROPERTY DETAILS MODAL =================
+      function openDetailsModal(plotId) {
+        hideHoverCard();
+        const targetId = plotId || activePlotId || "plot-23";
+        const plot = plotsData.find((p) => p.id === targetId) || plotsData[0];
+        const isSaved = savedPlotIds.has(plot.id);
+
+        const modalEl = document.getElementById("propertyModalContent");
+        modalEl.innerHTML =
+          '<div class="modal-gallery-wrap">' +
+            '<img src="' + plot.image + '" alt="' + plot.name + '" class="modal-gallery-img" />' +
+            '<button class="modal-close-btn" onclick="closePropertyModal()">&times;</button>' +
+          '</div>' +
+          '<div class="modal-content-pad">' +
+            '<div class="modal-head-row">' +
+              '<div>' +
+                '<div style="font-size:11px; font-weight:800; text-transform:uppercase; color:' + getStatusColor(plot.status) + '; margin-bottom:4px;">' +
+                  plot.status + ' &bull; PLOT ' + plot.number + ' &bull; ' + plot.type +
+                '</div>' +
+                '<h2 class="modal-title">' + plot.plotTitle + '</h2>' +
+                '<div class="modal-address">' + plot.address + '</div>' +
+              '</div>' +
+              '<div class="modal-price-box">' +
+                '<div class="modal-price-num">' + plot.price + '</div>' +
+                '<div style="font-size:11.5px; color:#64748b; font-weight:600;">Guide: ' + plot.rentGuide + '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="modal-specs-grid">' +
+              '<div class="spec-item-box">' +
+                '<div class="spec-val-text">' + plot.beds + ' Beds</div>' +
+                '<div class="spec-lbl-text">Bedrooms</div>' +
+              '</div>' +
+              '<div class="spec-item-box">' +
+                '<div class="spec-val-text">' + plot.baths + ' Baths</div>' +
+                '<div class="spec-lbl-text">Bathrooms</div>' +
+              '</div>' +
+              '<div class="spec-item-box">' +
+                '<div class="spec-val-text">' + plot.sqm + '</div>' +
+                '<div class="spec-lbl-text">Floor Area</div>' +
+              '</div>' +
+              '<div class="spec-item-box">' +
+                '<div class="spec-val-text">' + plot.yearBuilt + '</div>' +
+                '<div class="spec-lbl-text">Built / Completed</div>' +
+              '</div>' +
+            '</div>' +
+            '<p class="modal-desc-body">' + plot.description + '</p>' +
+            '<div style="font-size:12px; color:#334155; line-height:1.8; margin-bottom:20px; background:#f8fafc; padding:12px 16px; border-radius:6px; border:1px solid #e2e8f0;">' +
+              '<strong>Property Specifications:</strong><br>' +
+              '&bull; Tenure: ' + plot.tenure + '<br>' +
+              '&bull; Energy Rating: ' + plot.epc + '<br>' +
+              '&bull; Parking: ' + plot.parking + '<br>' +
+              '&bull; Grounds: ' + plot.garden +
+            '</div>' +
+            '<div class="modal-actions-footer">' +
+              '<button class="btn-card-outline" onclick="toggleSavePlot(event, \'' + plot.id + '\')">' +
+                (isSaved ? 'Saved in Favourites &hearts;' : 'Save Property') +
+              '</button>' +
+              '<button class="btn-card-outline" onclick="previewPlotLocation(\'' + plot.id + '\')">Get Directions</button>' +
+              '<button class="btn-card-solid" onclick="scheduleTour(\'' + plot.id + '\')">Inquire &amp; Book Tour</button>' +
+            '</div>' +
+          '</div>';
+
+        document.getElementById("propertyModalBackdrop").style.display = "flex";
+      }
+
+      function closePropertyModal() {
+        document.getElementById("propertyModalBackdrop").style.display = "none";
+      }
+
+      function handleModalBackdropClick(e) {
+        if (e.target.id === "propertyModalBackdrop") {
+          closePropertyModal();
+        }
+      }
+
+      function openCreatorModal() {
+        document.getElementById("creatorModalBackdrop").style.display = "flex";
+      }
+
+      function closeCreatorModal() {
+        document.getElementById("creatorModalBackdrop").style.display = "none";
+      }
+
+      function handleCreatorBackdropClick(e) {
+        if (e.target.id === "creatorModalBackdrop") {
+          closeCreatorModal();
+        }
+      }
+
+      // Compass & Pitch State Watchers
+      function updateCompassHeading() {
+        const needle = document.getElementById("compassNeedle");
+        if (needle) {
+          needle.style.transform = "rotate(" + -map.getBearing() + "deg)";
+        }
+      }
+
+      function updatePitchButtonsState() {
+        const pitch = map.getPitch();
+        const btn3D = document.getElementById("pitch3DBtn");
+        const btn2D = document.getElementById("pitch2DBtn");
+        if (btn3D && btn2D) {
+          if (pitch > 15) {
+            btn3D.classList.add("active-mode");
+            btn2D.classList.remove("active-mode");
+          } else {
+            btn2D.classList.add("active-mode");
+            btn3D.classList.remove("active-mode");
+          }
+        }
+      }
+
+      // Toast Helper
+      let toastTimer = null;
+      function showToast(msg) {
+        const toast = document.getElementById("toastMsg");
+        if (!toast) return;
+        toast.textContent = msg;
+        toast.classList.add("show");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toast.classList.remove("show");
+        }, 2800);
+      }
+    </script>
+  </body>
+</html>
